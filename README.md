@@ -69,4 +69,4 @@
 
 ## Диаграмма зависимостей модулей
 
-![Dependency](images/dependency.png)
+![Dependency](images/dependency.jpg)
