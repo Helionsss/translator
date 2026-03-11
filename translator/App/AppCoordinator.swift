@@ -14,5 +14,11 @@ final class AppCoordinator: AppCoordinatorProtocol {
         self.diContainer = diContainer
     }
 
-    func start() { }
+    func start() {
+        let navigationController = UINavigationController()
+        let authVC = diContainer.makeAuthModule()
+        navigationController.setViewControllers([authVC], animated: false)
+        window.rootViewController = navigationController
+        window.makeKeyAndVisible()
+    }
 }
