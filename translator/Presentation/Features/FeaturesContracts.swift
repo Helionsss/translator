@@ -1,14 +1,10 @@
-enum FeaturesViewState: Equatable {
-    case loading
-    case content([Feature])
-    case error(String)
-}
-
 protocol FeaturesView: AnyObject {
-    func render(_ state: FeaturesViewState)
+    func render(_ state: FeaturesState)
 }
 
-protocol FeaturesViewModel {
+protocol FeaturesViewModelProtocol: AnyObject {
+    var view: FeaturesView? { get set }
     func onAppear()
+    func retry()
     func didSelectFeature(id: String)
 }

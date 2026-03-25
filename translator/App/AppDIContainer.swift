@@ -2,6 +2,8 @@ import UIKit
 
 final class AppDIContainer {
 
+    private let networkClient: NetworkClient = URLSessionNetworkClient()
+
     func makeAuthModule() -> UIViewController {
         let repository = DefaultAuthRepository()
         let loginUseCase = DefaultLoginUseCase(repository: repository)
@@ -29,11 +31,23 @@ final class AppDIContainer {
     }
 
     func makeFeaturesModule(session: UserSession) -> UIViewController {
-        return FeaturesViewController()
+        let repository = DefaultFeaturesRepository(networkClient: networkClient)
+        let useCase = DefaultGetAvailableFeaturesUseCase(repository: repository)
+        let viewModel = DefaultFeaturesViewModel(useCase: useCase) { [weak self] featureId in
+            _ = self?.makeTranslateModule(session: session)
+        }
+        let vc = FeaturesViewController(viewModel: viewModel)
+        viewModel.view = vc
+        return vc
     }
 
     func makeTranslateModule(session: UserSession) -> UIViewController {
-        // stub
-        return FeaturesViewController()
+        return FeaturesViewController(viewModel: makeFeaturesStubViewModel())
+    }
+
+    private func makeFeaturesStubViewModel() -> FeaturesViewModelProtocol {
+        let repository = DefaultFeaturesRepository(networkClient: networkClient)
+        let useCase = DefaultGetAvailableFeaturesUseCase(repository: repository)
+        return DefaultFeaturesViewModel(useCase: useCase, onSelectFeature: { _ in })
     }
 }
