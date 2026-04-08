@@ -98,11 +98,62 @@
 - **D3** — локальный fallback через `languages.json` в Bundle (флаг `useLocalFallback`)
 - **D5** — in-memory кэш в `DefaultFeaturesRepository`
 
+---
+
+## Лаба 5
+
+### Подход к списку
+
+**Выбран:** `UITableView` + `UITableViewDiffableDataSource`
+
+**Обоснование:**
+- `UITableView` — стандартный и оптимальный выбор для вертикальных списков в UIKit
+- `UITableViewDiffableDataSource` обеспечивает анимированные и безопасные обновления без ручного управления `reloadRows`
+- `FeaturesListManager` / `AvailableLanguagesListManager` инкапсулируют всю логику работы со списком
+- Кастомные ячейки с корректным `prepareForReuse` для сброса асинхронных операций
+
+### Структура экранов
+
+```
+Features (главное меню)
+├── Translate → Translate screen
+├── Available Languages → AvailableLanguages screen (список стран ~217)
+│   └── тап на страну → Translate screen с языком
+├── History → Stub screen
+├── Favorites → Stub screen
+└── Settings → Stub screen
+```
+
+### Как открыть экран списка
+
+После авторизации открывается Features (главное меню). Тап на "Available Languages" → экран со списком стран.
+
+### Состояния экрана Available Languages
+
+| Состояние | Как увидеть |
+|-----------|-------------|
+| **Loading** | При запуске экрана (индикатор по центру) |
+| **Content** | После загрузки (~217 стран с флагами) |
+| **Empty** | API вернул пусто или поиск не дал результатов |
+| **Error** | Нет интернета / ошибка сервера (кнопка Retry) |
+
+### Что происходит по tap
+
+- **Features:** тап на фичу → навигация к соответствующему экрану
+- **Available Languages:** тап на страну → Translate screen с выбранным языком
+
+### Реализованные дополнительные задания
+
+- **D1 (Pull-to-refresh)** — `UIRefreshControl` на Available Languages
+- **D2 (Поиск по списку)** — `UISearchBar` с клиентской фильтрацией
+- **D3 (Картинки + кеширование + корректный reuse)** — `ImageLoader` + `NSCache` + отмена в `prepareForReuse`
+- **D4 (Diffable Data Source)** — `UITableViewDiffableDataSource` через ListManager
+
 ### Как проверить
 
-После авторизации `AppDIContainer.makeFeaturesModule` создаёт `DefaultFeaturesViewModel`, который при `onAppear()` запускает загрузку. Результат виден в консоли:
-```
-[FeaturesVC] loading…
-[FeaturesVC] loaded 217 items: ["Afghanistan", "Albania", "Algeria", "American Samoa", "Andorra",
-```
-Для локального fallback: передать `useLocalFallback: true` в `DefaultFeaturesRepository` и добавить `languages.json`
+1. Авторизоваться → Features screen (Translate, Languages, History, Favorites, Settings)
+2. Тап на "Available Languages" → список стран с флагами
+3. Потянуть вниз для refresh
+4. Ввести текст в searchBar для фильтрации
+5. Тап на страну → Translate screen
+6. Отключить интернет → error с кнопкой Retry

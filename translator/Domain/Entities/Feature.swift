@@ -1,10 +1,11 @@
 import Foundation
 
 enum FeatureType: String, Equatable {
-    case text
-    case voice
-    case photo
+    case translate
+    case languages
     case history
+    case favorites
+    case settings
 }
 
 struct Feature: Equatable {
