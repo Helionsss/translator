@@ -17,5 +17,17 @@ struct FeatureCellViewModel: Equatable, Hashable {
 
 enum FeaturesState: Equatable {
     case idle
+    case loading
     case content([FeatureCellViewModel])
+    case error(String)
+    
+    static func == (lhs: FeaturesState, rhs: FeaturesState) -> Bool {
+        switch (lhs, rhs) {
+        case (.idle, .idle): return true
+        case (.loading, .loading): return true
+        case (.content(let lhsItems), .content(let rhsItems)): return lhsItems == rhsItems
+        case (.error(let lhsMessage), .error(let rhsMessage)): return lhsMessage == rhsMessage
+        default: return false
+        }
+    }
 }
