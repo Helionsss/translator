@@ -5,6 +5,5 @@ protocol FeaturesView: AnyObject {
 protocol FeaturesViewModelProtocol: AnyObject {
     var view: FeaturesView? { get set }
     func onAppear()
-    func retry()
-    func didSelectFeature(id: String)
+    func didSelectFeature(type: FeatureType)
 }
