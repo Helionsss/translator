@@ -4,43 +4,15 @@ final class AvailableLanguagesViewController: UIViewController, AvailableLanguag
     private let viewModel: AvailableLanguagesViewModelProtocol
     private let onSelectLanguage: (String) -> Void
 
-    private let tableView = UITableView(frame: .zero, style: .plain)
+    private lazy var tableView = UITableView(frame: .zero, style: .plain)
     private lazy var listManager = AvailableLanguagesListManager(tableView: tableView)
-
-    private let refreshControl = UIRefreshControl()
-    private let searchBar = UISearchBar()
-    private let loadingIndicator = UIActivityIndicatorView(style: .large)
-
-    private let emptyLabel: UILabel = {
-        let label = UILabel()
-        label.text = "No languages available"
-        label.textAlignment = .center
-        label.textColor = .secondaryLabel
-        label.font = .preferredFont(forTextStyle: .body)
-        label.isHidden = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    private let errorLabel: UILabel = {
-        let label = UILabel()
-        label.textAlignment = .center
-        label.textColor = .secondaryLabel
-        label.font = .preferredFont(forTextStyle: .body)
-        label.numberOfLines = 0
-        label.isHidden = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    private let retryButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("Retry", for: .normal)
-        button.isHidden = true
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-
+    private lazy var refreshControl = UIRefreshControl()
+    private lazy var searchBar = UISearchBar()
+    
+    private lazy var loadingView = DSLoadingView()
+    private lazy var errorView = DSErrorView()
+    private lazy var emptyView = DSEmptyView()
+    
     private let stateContainer = UIView()
 
     init(viewModel: AvailableLanguagesViewModelProtocol, onSelectLanguage: @escaping (String) -> Void) {
@@ -78,34 +50,26 @@ final class AvailableLanguagesViewController: UIViewController, AvailableLanguag
         ])
 
         stateContainer.addSubview(tableView)
-        stateContainer.addSubview(emptyLabel)
-        stateContainer.addSubview(errorLabel)
-        stateContainer.addSubview(retryButton)
-        stateContainer.addSubview(loadingIndicator)
+        [loadingView, errorView, emptyView].forEach { stateView in
+            stateContainer.addSubview(stateView)
+            stateView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                stateView.leadingAnchor.constraint(equalTo: stateContainer.leadingAnchor),
+                stateView.trailingAnchor.constraint(equalTo: stateContainer.trailingAnchor),
+                stateView.topAnchor.constraint(equalTo: stateContainer.topAnchor),
+                stateView.bottomAnchor.constraint(equalTo: stateContainer.bottomAnchor)
+            ])
+            stateView.isHidden = true
+        }
 
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        emptyLabel.translatesAutoresizingMaskIntoConstraints = false
-        errorLabel.translatesAutoresizingMaskIntoConstraints = false
-        retryButton.translatesAutoresizingMaskIntoConstraints = false
-        loadingIndicator.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             tableView.leadingAnchor.constraint(equalTo: stateContainer.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: stateContainer.trailingAnchor),
             tableView.topAnchor.constraint(equalTo: stateContainer.topAnchor),
-            tableView.bottomAnchor.constraint(equalTo: stateContainer.bottomAnchor),
-
-            emptyLabel.centerXAnchor.constraint(equalTo: stateContainer.centerXAnchor),
-            emptyLabel.centerYAnchor.constraint(equalTo: stateContainer.centerYAnchor),
-
-            errorLabel.centerXAnchor.constraint(equalTo: stateContainer.centerXAnchor),
-            errorLabel.centerYAnchor.constraint(equalTo: stateContainer.centerYAnchor, constant: -20),
-
-            retryButton.centerXAnchor.constraint(equalTo: stateContainer.centerXAnchor),
-            retryButton.topAnchor.constraint(equalTo: errorLabel.bottomAnchor, constant: 12)
+            tableView.bottomAnchor.constraint(equalTo: stateContainer.bottomAnchor)
         ])
-
-        loadingIndicator.center = stateContainer.center
 
         view.addSubview(searchContainer)
         view.addSubview(stateContainer)
@@ -126,8 +90,10 @@ final class AvailableLanguagesViewController: UIViewController, AvailableLanguag
 
         refreshControl.addTarget(self, action: #selector(refreshTapped), for: .valueChanged)
         tableView.refreshControl = refreshControl
-
-        retryButton.addTarget(self, action: #selector(retryTapped), for: .touchUpInside)
+        
+        errorView.onRetry = { [weak self] in
+            self?.viewModel.retry()
+        }
     }
 
     private func setupListManager() {
@@ -144,63 +110,46 @@ final class AvailableLanguagesViewController: UIViewController, AvailableLanguag
     }
 
     func render(_ state: AvailableLanguagesState) {
+        tableView.isHidden = true
+        loadingView.isHidden = true
+        errorView.isHidden = true
+        emptyView.isHidden = true
+        searchBar.isUserInteractionEnabled = true
+        refreshControl.endRefreshing()
+        
         switch state {
         case .idle:
             break
         case .loading:
-            showLoading()
+            loadingView.startAnimating()
+            loadingView.isHidden = false
+            searchBar.isUserInteractionEnabled = false
         case .content(let items):
             listManager.setItems(items)
-            showContent()
+            tableView.isHidden = false
         case .empty:
-            showEmpty()
+            emptyView.message = "No languages available"
+            emptyView.isHidden = false
         case .error(let message):
-            showError(message)
+            errorView.message = message
+            errorView.isHidden = false
         }
     }
-
-    func showLoading() {
-        tableView.isHidden = true
-        emptyLabel.isHidden = true
-        errorLabel.isHidden = true
-        retryButton.isHidden = true
-        loadingIndicator.isHidden = false
-        loadingIndicator.startAnimating()
-        searchBar.isUserInteractionEnabled = false
-    }
-
+    
     func showContent() {
-        loadingIndicator.stopAnimating()
-        loadingIndicator.isHidden = true
-        emptyLabel.isHidden = true
-        errorLabel.isHidden = true
-        retryButton.isHidden = true
-        tableView.isHidden = false
-        searchBar.isUserInteractionEnabled = true
-        refreshControl.endRefreshing()
+        render(.content([]))
     }
-
-    func showEmpty() {
-        loadingIndicator.stopAnimating()
-        loadingIndicator.isHidden = true
-        tableView.isHidden = true
-        errorLabel.isHidden = true
-        retryButton.isHidden = true
-        emptyLabel.isHidden = false
-        searchBar.isUserInteractionEnabled = true
-        refreshControl.endRefreshing()
+    
+    func showLoading() {
+        render(.loading)
     }
-
+    
     func showError(_ message: String) {
-        loadingIndicator.stopAnimating()
-        loadingIndicator.isHidden = true
-        tableView.isHidden = true
-        emptyLabel.isHidden = true
-        errorLabel.text = message
-        errorLabel.isHidden = false
-        retryButton.isHidden = false
-        searchBar.isUserInteractionEnabled = true
-        refreshControl.endRefreshing()
+        render(.error(message))
+    }
+    
+    func showEmpty() {
+        render(.empty)
     }
 }
 

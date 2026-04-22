@@ -6,17 +6,14 @@ final class AuthViewController: UIViewController, UITextFieldDelegate {
     private let validator: CredentialsValidator
     private let onLoginSuccess: () -> Void
 
-    private let scrollView = UIScrollView()
-    private let contentView = UIView()
-
-    private let stack = UIStackView()
-    private let titleLabel = UILabel()
-    private let emailField = UITextField()
-    private let emailErrorLabel = UILabel()
-    private let passwordField = UITextField()
-    private let passwordErrorLabel = UILabel()
-    private let loginButton = UIButton(type: .system)
-    private let activity = UIActivityIndicatorView(style: .medium)
+    private lazy var scrollView = UIScrollView()
+    private lazy var contentView = UIView()
+    private lazy var stack = UIStackView()
+    private lazy var titleLabel = UILabel()
+    private lazy var emailField = DSTextField()
+    private lazy var passwordField = DSTextField()
+    private lazy var loginButton = DSButton(style: .primary)
+    private lazy var activity = UIActivityIndicatorView(style: .medium)
 
     init(loginUseCase: LoginUseCase, validator: CredentialsValidator, onLoginSuccess: @escaping () -> Void) {
         self.loginUseCase = loginUseCase
@@ -29,7 +26,7 @@ final class AuthViewController: UIViewController, UITextFieldDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = DS.Colors.background
         setupUI()
         setupKeyboardObservers()
         updateValidationState()
@@ -63,68 +60,52 @@ final class AuthViewController: UIViewController, UITextFieldDelegate {
         ])
 
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = DS.Spacing.m
         stack.alignment = .fill
         stack.distribution = .fill
 
         contentView.addSubview(stack)
         stack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stack.topAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.topAnchor, constant: 40),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20)
+            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: DS.Spacing.m),
+            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -DS.Spacing.m),
+            stack.topAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.topAnchor, constant: DS.Spacing.xl),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -DS.Spacing.m)
         ])
 
         titleLabel.text = "Authorization"
-        titleLabel.font = .preferredFont(forTextStyle: .largeTitle)
+        titleLabel.apply(.title)
         titleLabel.textAlignment = .center
         stack.addArrangedSubview(titleLabel)
+        stack.setCustomSpacing(DS.Spacing.xl, after: titleLabel)
 
-        emailField.placeholder = "Email"
+        emailField.configure(with: DSTextField.Configuration(
+            placeholder: "Email",
+            accessibilityIdentifier: "emailField"
+        ))
         emailField.keyboardType = .emailAddress
         emailField.textContentType = .username
-        emailField.autocapitalizationType = .none
-        emailField.autocorrectionType = .no
-        emailField.borderStyle = .roundedRect
+        emailField.returnKeyType = .next
         emailField.delegate = self
         emailField.addTarget(self, action: #selector(textChanged), for: .editingChanged)
-        emailField.returnKeyType = .next
-        emailField.accessibilityIdentifier = "emailField"
-
-        emailErrorLabel.textColor = .systemRed
-        emailErrorLabel.font = .preferredFont(forTextStyle: .footnote)
-        emailErrorLabel.numberOfLines = 0
-        emailErrorLabel.isHidden = true
-
-        let emailStack = UIStackView(arrangedSubviews: [emailField, emailErrorLabel])
-        emailStack.axis = .vertical
-        emailStack.spacing = 4
-        stack.addArrangedSubview(emailStack)
-
-        passwordField.placeholder = "Password"
+        stack.addArrangedSubview(emailField)
+        
+        passwordField.configure(with: DSTextField.Configuration(
+            placeholder: "Password",
+            accessibilityIdentifier: "passwordField"
+        ))
         passwordField.isSecureTextEntry = true
         passwordField.textContentType = .password
-        passwordField.borderStyle = .roundedRect
+        passwordField.returnKeyType = .go
         passwordField.delegate = self
         passwordField.addTarget(self, action: #selector(textChanged), for: .editingChanged)
-        passwordField.returnKeyType = .go
-        passwordField.accessibilityIdentifier = "passwordField"
-
-        passwordErrorLabel.textColor = .systemRed
-        passwordErrorLabel.font = .preferredFont(forTextStyle: .footnote)
-        passwordErrorLabel.numberOfLines = 0
-        passwordErrorLabel.isHidden = true
-
-        let passwordStack = UIStackView(arrangedSubviews: [passwordField, passwordErrorLabel])
-        passwordStack.axis = .vertical
-        passwordStack.spacing = 4
-        stack.addArrangedSubview(passwordStack)
-
-        loginButton.setTitle("Enter", for: .normal)
+        stack.addArrangedSubview(passwordField)
+        
+        loginButton.configure(with: DSButton.Configuration(
+            title: "Enter",
+            accessibilityIdentifier: "loginButton"
+        ))
         loginButton.addTarget(self, action: #selector(loginTapped), for: .touchUpInside)
-        loginButton.configuration = .filled()
-        loginButton.accessibilityIdentifier = "loginButton"
         stack.addArrangedSubview(loginButton)
 
         activity.hidesWhenStopped = true
@@ -176,11 +157,8 @@ final class AuthViewController: UIViewController, UITextFieldDelegate {
         let emailValid = validator.isValidEmail(emailText)
         let passwordValid = validator.isValidPassword(passwordText)
 
-        emailErrorLabel.text = emailValid ? nil : "Write a valid email"
-        emailErrorLabel.isHidden = emailValid || emailText.isEmpty
-
-        passwordErrorLabel.text = passwordValid ? nil : "Password must be at least 6 characters"
-        passwordErrorLabel.isHidden = passwordValid || passwordText.isEmpty
+        emailField.error = emailValid || emailText.isEmpty ? nil : "Write a valid email"
+        passwordField.error = passwordValid || passwordText.isEmpty ? nil : "Password must be at least 6 characters"
 
         loginButton.isEnabled = emailValid && passwordValid
     }
@@ -192,8 +170,7 @@ final class AuthViewController: UIViewController, UITextFieldDelegate {
 
     private func showError(_ error: Error) {
         if let err = error as? LocalizedError, let message = err.errorDescription {
-            passwordErrorLabel.text = message
-            passwordErrorLabel.isHidden = false
+            passwordField.error = message
         } else {
             let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
             alert.addAction(UIAlertAction(title: "OK", style: .default))
@@ -202,9 +179,9 @@ final class AuthViewController: UIViewController, UITextFieldDelegate {
     }
 
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        if textField === emailField {
-            passwordField.becomeFirstResponder()
-        } else if textField === passwordField {
+        if textField === emailField.textField {
+            _ = passwordField.becomeFirstResponder()
+        } else if textField === passwordField.textField {
             if loginButton.isEnabled { loginTapped() }
         }
         return true
