@@ -3,6 +3,7 @@ import UIKit
 final class AppDIContainer {
 
     private let networkClient: NetworkClient = URLSessionNetworkClient()
+    private let translationStore = TranslationStore()
 
     func makeAuthModule() -> UIViewController {
         let repository = DefaultAuthRepository()
@@ -55,19 +56,17 @@ final class AppDIContainer {
     }
 
     func makeTranslateModule(session: UserSession, languageId: String? = nil) -> UIViewController {
-        let vc = UIViewController()
-        vc.view.backgroundColor = .systemBackground
-        vc.title = "Translate"
-        let label = UILabel()
-        label.text = languageId.map { "Translate (\($0))" } ?? "Translate"
-        label.textAlignment = .center
-        label.font = .preferredFont(forTextStyle: .title1)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        vc.view.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: vc.view.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: vc.view.centerYAnchor)
-        ])
+        let translateUseCase = DefaultTranslateUseCase()
+        let saveUseCase = DefaultSaveTranslationUseCase(store: translationStore)
+        let historyUseCase = DefaultGetHistoryUseCase(store: translationStore)
+
+        let viewModel = DefaultTranslateViewModel(
+            translateUseCase: translateUseCase,
+            saveUseCase: saveUseCase,
+            historyUseCase: historyUseCase
+        )
+        let mapper = DefaultBDUIViewMapper()
+        let vc = TranslateViewController(viewModel: viewModel, mapper: mapper)
         return vc
     }
 

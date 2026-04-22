@@ -223,3 +223,74 @@ D5 — Унифицированные компоненты для состоян
 2.  Авторизоваться → экран Features с фичами
 3.  Отключить интернет → появится DSErrorView
 4.  Проверить переключение системной темы → вся дизайн система автоматически подстраивается
+
+---
+
+## Лаба 7
+
+### Допы
+
+- Расширенная дизайн система
+
+```Swift
+enum BDUIViewType: String, Decodable {
+    case contentView
+    case containerView
+    case stackView
+    case label
+    case button
+    case textField
+    case imageView
+    case spacer
+    case separator
+    case scrollView
+}
+
+struct BDUILayout: Decodable {
+    let spacing: DSSpacingToken?
+    let axis: BDUIAxis?
+    let alignment: BDUIAlignment?
+    let distribution: BDUIDistribution?
+    let contentInsets: BDUIEdgeInsets?
+    let backgroundColor: DSColorToken?
+    let cornerRadius: CGFloat?
+    let fixedSize: BDUIFixedSize?
+}
+
+struct BDUIConstraints: Decodable {
+    let pinToSuperview: Bool?
+    let top: CGFloat?
+    let left: CGFloat?
+    let bottom: CGFloat?
+    let right: CGFloat?
+    let centerX: Bool?
+    let centerY: Bool?
+    let width: CGFloat?
+    let height: CGFloat?
+}
+```
+
+- Реализованы экшены
+
+```Swift
+struct BDUIAction: Decodable {
+    let kind: String
+    let destination: String?
+    let targetId: String?
+    let value: String?
+    let message: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case kind = "type"
+        case destination
+        case targetId
+        case value
+        case message
+    }
+}
+```
+
+### Как проверить
+
+Экран Translate сделан с помощью BDUI (конфиг в TranslateBDUIConfiguration.swift). 
+Кнопка ReloadUI перестраивает экран (по тому же json), History делает роутинг на историю, Print вызывает экшен для алерта с текстом из конфига
